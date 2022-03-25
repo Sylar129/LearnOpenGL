@@ -1,0 +1,9 @@
+# VS文件
+.vs/
+
+# 生成物
+bin/
+intermediate/
+
+# 用户文件
+*.user
