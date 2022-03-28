@@ -14,6 +14,9 @@
     <ClInclude Include="includes\glad\glad.h" />
     <ClInclude Include="includes\GLFW\glfw3.h" />
     <ClInclude Include="includes\GLFW\glfw3native.h" />
+    <ClInclude Include="includes\glm\glm.hpp" />
+    <ClInclude Include="includes\glm\gtc\matrix_transform.hpp" />
+    <ClInclude Include="includes\glm\gtc\type_ptr.hpp" />
     <ClInclude Include="includes\KHR\khrplatform.h" />
     <ClInclude Include="includes\Shader.h" />
     <ClInclude Include="includes\stb_image.h" />

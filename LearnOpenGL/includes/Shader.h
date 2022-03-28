@@ -19,6 +19,8 @@ public:
     // 删除程序
     void Delete();
 
+    inline unsigned int GetID() const { return m_ID; }
+
     // uniform工具函数
     void SetBool(const std::string& name, bool value) const;
     void SetInt(const std::string& name, int value) const;
