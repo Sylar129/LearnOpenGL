@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Shader.h"
+#include "stb_image.h"
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
@@ -18,6 +19,9 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    // 图片颠倒
+    stbi_set_flip_vertically_on_load(true);
+
     // 创建一个窗口对象
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "LearnOpenGL", nullptr, nullptr);
     if (nullptr == window) {
@@ -27,26 +31,27 @@ int main() {
     }
     glfwMakeContextCurrent(window);
 
+    // 注册窗口大小回调函数
+    glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height) {
+        glViewport(0, 0, width, height);
+    });
+
     // 初始化GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
-    // 设置视口(Viewport)大小/设置窗口的维度(Dimension)
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-    // 注册窗口大小回调函数
-    glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height) {
-        glViewport(0, 0, width, height);
-    });
+    // 生成Shader对象
+    Shader shader("res/shaders/VertexShader.glsl", "res/shaders/FragmentShader.glsl");
 
     // 定义顶点坐标
     float vertices[] = {
-         0.5f,  0.5f, 0.0f,     // 右上角
-         0.5f, -0.5f, 0.0f,     // 右下角
-        -0.5f, -0.5f, 0.0f,     // 左下角
-        -0.5f,  0.5f, 0.0f      // 左上角
+        //       位置       //       颜色      //  纹理坐标
+         0.5f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f,     // 右上
+         0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,     // 右下
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,     // 左下
+        -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 0.0f,  0.0f, 1.0f      // 左上
     };
 
     // 定义索引坐标
@@ -59,39 +64,89 @@ int main() {
     unsigned int VAO = 0;
     glGenVertexArrays(1, &VAO);
 
-    // 绑定VAO
-    glBindVertexArray(VAO);
-
     // 生成顶点缓冲对象(Vertex Buffer Objects, VBO)
     unsigned int VBO = 0;
     glGenBuffers(1, &VBO);
-
-    // 绑定缓冲对象
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    // 绑定数据
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // 链接顶点属性
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
 
     // 生成索引缓冲对象(Index Buffer Object,IBO/Element Buffer Object, EBO)
     unsigned int EBO;
     glGenBuffers(1, &EBO);
 
-    // 绑定数据
+    // 绑定数组对象
+    glBindVertexArray(VAO);
+
+    // 绑定顶点缓冲对象
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // 绑定索引缓冲对象
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // 生成Shader对象
-    Shader shader("res/shaders/VertexShader.glsl", "res/shaders/FragmentShader.glsl");
-
-    // 激活程序对象
-    shader.Use();
+    // 链接顶点属性
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     // 线框模式（可选）
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // 创建纹理
+    unsigned int texture1, texture2;
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+
+    // 设置纹理参数
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // 加载图片
+    int width, height, channels;
+    unsigned char* data = stbi_load("res/textures/container.jpg", &width, &height, &channels, 0);
+
+    // 生成纹理
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        std::cout << "Failed to load texture1" << std::endl;
+    }
+
+    // 释放内存
+    stbi_image_free(data);
+
+
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+
+    // 设置纹理参数
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // 加载图片
+    data = stbi_load("res/textures/awesomeface.png", &width, &height, &channels, 0);
+
+    // 生成纹理
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        std::cout << "Failed to load texture2" << std::endl;
+    }
+
+    // 释放内存
+    stbi_image_free(data);
+
+    shader.Use();
+    shader.SetInt("texture1", 0);
+    shader.SetInt("texture2", 1);
 
     // 渲染循环(Rnder Loop)
     while (!glfwWindowShouldClose(window)) {
@@ -102,15 +157,18 @@ int main() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // 更新uniform颜色
-        float timeValue = glfwGetTime();
-        float greenValue = sin(timeValue) / 2.0f + 0.5f;
-        //int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        //glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-        shader.SetFloat4("ourColor", 0.0f, greenValue, 0.0f, 1.0f);
+        // 绑定纹理
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+
+        shader.Use();
+
+        // 绑定VAO
+        glBindVertexArray(VAO);
 
         // 绘制三角形
-        glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // 检查并调用事件，交换缓冲
